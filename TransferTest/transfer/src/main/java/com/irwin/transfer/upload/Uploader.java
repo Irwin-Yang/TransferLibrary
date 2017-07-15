@@ -200,7 +200,7 @@ public class Uploader implements Status, MultipartConsts {
             fouts.close();
             fouts = null;
 
-            //Respond.
+            //Response.
             if (connection.getResponseCode() != 200) {
                 throw new IllegalStateException(String.format("Error upload response: code:%s  msg:%s", connection.getResponseCode(), connection.getResponseMessage()));
             }
