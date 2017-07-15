@@ -53,6 +53,7 @@ public class DownloadTaskManager implements TaskInfo.Columns {
 
     private DownloadTaskManager(Context context) {
         mTaskDBHelper = new TaskDBHelper(context, null);
+        TaskDao.getInstance().buildStatus();
         TaskDao.getInstance().registerObserver(mTaskObserver);
     }
 
@@ -106,8 +107,9 @@ public class DownloadTaskManager implements TaskInfo.Columns {
      *
      * @param repeatedly true if re-download
      */
-    public void setDownloadRepeatedly(boolean repeatedly) {
+    public DownloadTaskManager setDownloadRepeatedly(boolean repeatedly) {
         mRepeatedly = repeatedly;
+        return this;
     }
 
     long createTask(Request request) {
@@ -207,6 +209,14 @@ public class DownloadTaskManager implements TaskInfo.Columns {
         return ret;
     }
 
+    /**
+     * Resume downloading tasks.
+     */
+    public void resume()
+    {
+        checkTask();
+    }
+
     public boolean remove(long id) {
         return remove(id, true);
     }
@@ -239,7 +249,7 @@ public class DownloadTaskManager implements TaskInfo.Columns {
             int waitingCount = waitings.size();
             for (int i = 0; i < size && i < waitingCount; i++) {
                 final TaskInfo info = waitings.get(i);
-                //Avoid download duplicately.
+                //Avoid to download repeatedly.
                 if (mTaskMap.get(Long.valueOf(info.ID)) != null) {
                     i--;
                     waitings.remove(info);

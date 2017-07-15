@@ -131,4 +131,10 @@ public class TaskDao extends ObservableDao<TaskInfo, Long> implements TaskInfo.C
                 null, null, UPDATE_TIME + " ASC", null, null);
     }
 
+    public List<TaskInfo> getTaskByStatus(int status) {
+        return query(true, STATUS + "=?",
+                new String[]{String.valueOf(status)},
+                null, null, UPDATE_TIME + " ASC", null, null);
+    }
+
 }

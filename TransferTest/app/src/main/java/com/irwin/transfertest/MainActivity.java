@@ -7,7 +7,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -61,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements DownloadTaskManag
                 uploadAsync();
             }
         });
-        initDownload();
+        initDownloadManager();
         initList();
     }
 
@@ -169,8 +168,8 @@ public class MainActivity extends AppCompatActivity implements DownloadTaskManag
         thread.start();
     }
 
-    void initDownload() {
-        DownloadTaskManager.getInstance().addCallback(this).setParallel(2).setDownloadRepeatedly(false);
+    void initDownloadManager() {
+        DownloadTaskManager.setup(this).addCallback(this).setParallel(2).setDownloadRepeatedly(false);
     }
 
     void initList() {
@@ -196,13 +195,6 @@ public class MainActivity extends AppCompatActivity implements DownloadTaskManag
         mLV_Download.setAdapter(mAdapter);
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
