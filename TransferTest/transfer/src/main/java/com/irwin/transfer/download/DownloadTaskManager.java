@@ -19,7 +19,8 @@ import java.util.List;
 
 /**
  * Created by Irwin on 2016/3/9.
- * Download Manager
+ * Download Manager which Support multi-task downloading and parallel controlling, breakpoint continue downloading,
+ * subscribing status changing events of downloading.
  */
 public class DownloadTaskManager implements TaskInfo.Columns {
 
@@ -306,11 +307,11 @@ public class DownloadTaskManager implements TaskInfo.Columns {
         }
     }
 
-    public  interface DownloadCallback {
+    public interface DownloadCallback {
 
-         void onStatusChange(long id, int status);
+        void onStatusChange(long id, int status);
 
-         void onProgress(long id, long currentBytes, long totalBytes);
+        void onProgress(long id, long currentBytes, long totalBytes);
     }
 
     private final IDBObserver mTaskObserver = new IDBObserver() {
