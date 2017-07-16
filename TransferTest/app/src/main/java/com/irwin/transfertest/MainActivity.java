@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements DownloadTaskManag
     void uploadAsync() {
         String url = "http://172.16.118.100:8080/FileServer/upload";
         String root = Environment.getExternalStorageDirectory().getAbsolutePath();
-        String[] names = new String[]{"demo.mp4"/*, "depo.jpg", "o_c3.png", "o_c4.png"*/};
+        String[] names = new String[]{"demo.mp4", "depo.jpg", "o_c3.png", "o_c4.png"};
         List<UploadParam> list = new ArrayList<>(names.length);
         for (String item : names) {
             UploadParam param = new UploadParam(url);
