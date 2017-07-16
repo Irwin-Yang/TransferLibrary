@@ -9,7 +9,7 @@ An library for file downloading/uploading in a reliable and simple way on Androi
 </br>
 3.Support subscribing status/progress changing events of downloading.
 </br>
-4.Multpart form uploading.
+4.Multipart/form uploading.
 </br>
 </br>
 ![](https://github.com/Zeal27/TransferLibrary/blob/master/Pics/ezgif-1-9f2a149d38.gif?raw=true)
@@ -50,7 +50,15 @@ An library for file downloading/uploading in a reliable and simple way on Androi
  
  </br>
  
-#### 3.To upload, use code below:
+#### 3.Or just use `AsyncDownloader` for simple downloading:
+
+```Java
+new AsyncDownloader(URL,STORE_PATH,DOWNLOAD_LISTENER).execute();
+```
+ 
+ </br>
+ 
+#### 4.To upload, use `AsyncUploader` as below:
  
  ```Java
       //Create and config your upload param.
