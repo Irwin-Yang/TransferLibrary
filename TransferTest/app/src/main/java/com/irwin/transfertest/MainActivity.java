@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements DownloadTaskManager.DownloadCallback {
 
@@ -89,15 +90,29 @@ public class MainActivity extends AppCompatActivity implements DownloadTaskManag
         }).start();
     }
 
+    private String getMimeType(String fileName) {
+        fileName = fileName.toLowerCase();
+        if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".webp")) {
+            return Uploader.MIME_TYPE_IMAGE;
+        }
+        return Uploader.MIME_TYPE_STREAM;
+
+    }
+
     void uploadAsync() {
-        String url = "http://172.16.168.12";
-        UploadParam param = new UploadParam(url);
-        param.setContentType(Uploader.MIME_TYPE_STREAM)
-                .setFileKey("fileKey")
-                .setPath(new File(Environment.getExternalStorageDirectory(), "scs.jpeg").getAbsolutePath())
-                .addParams(new MultipartParam("name", "scs.jpeg"))
-                .addParams(new MultipartParam("type", "phootball_match_data"));
-        AsyncUploader uploader = new AsyncUploader().setParam(param);
+        String url = "http://172.16.118.100:8080/FileServer/upload";
+        String root = Environment.getExternalStorageDirectory().getAbsolutePath();
+        String[] names = new String[]{"demo.mp4"/*, "depo.jpg", "o_c3.png", "o_c4.png"*/};
+        List<UploadParam> list = new ArrayList<>(names.length);
+        for (String item : names) {
+            UploadParam param = new UploadParam(url);
+            param.setContentType(getMimeType(item))
+                    .setFileKey(item)
+                    .setPath(root + File.separator + item)
+                    .addParams(new MultipartParam("name", item));
+            list.add(param);
+        }
+        AsyncUploader uploader = new AsyncUploader().setParam(list);
         uploader.setListener(new Uploader.UploadListener() {
             @Override
             public void onStatusChanged(int status, Object msg) {

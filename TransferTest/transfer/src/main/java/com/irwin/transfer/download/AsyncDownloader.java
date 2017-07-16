@@ -7,14 +7,14 @@ import android.os.AsyncTask;
  * Created by Irwin on 2016/2/22.
  * A lite implementation for downloading file asynchronously.
  */
-public class DownloadTask extends AsyncTask<String, Long, Void> {
+public class AsyncDownloader extends AsyncTask<String, Long, Void> {
     private Downloader mDownloader;
 
-    public DownloadTask(String url, String path, DownloadListener downloadListener) {
+    public AsyncDownloader(String url, String path, DownloadListener downloadListener) {
         this(url, path, 0, 0, downloadListener);
     }
 
-    public DownloadTask(String url, String path, long rangeStart, long rangeEnd, DownloadListener downloadListener) {
+    public AsyncDownloader(String url, String path, long rangeStart, long rangeEnd, DownloadListener downloadListener) {
         Downloader downloader = new Downloader();
         mDownloader = downloader;
         downloader.setUrl(url);
@@ -31,7 +31,7 @@ public class DownloadTask extends AsyncTask<String, Long, Void> {
         return null;
     }
 
-    public DownloadTask setListener(DownloadListener listener) {
+    public AsyncDownloader setListener(DownloadListener listener) {
         if (mDownloader != null) {
             mDownloader.setListener(listener);
         }

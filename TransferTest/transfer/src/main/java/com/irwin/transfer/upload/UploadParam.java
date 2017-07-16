@@ -134,5 +134,28 @@ public class UploadParam implements MultipartConsts {
         return mParams;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
+        UploadParam param = (UploadParam) o;
+
+        if (mFileKey != null ? !mFileKey.equals(param.mFileKey) : param.mFileKey != null)
+            return false;
+        if (mFileName != null ? !mFileName.equals(param.mFileName) : param.mFileName != null)
+            return false;
+        if (mPath != null ? !mPath.equals(param.mPath) : param.mPath != null) return false;
+        return mFileType != null ? mFileType.equals(param.mFileType) : param.mFileType == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = mFileKey != null ? mFileKey.hashCode() : 0;
+        result = 31 * result + (mFileName != null ? mFileName.hashCode() : 0);
+        result = 31 * result + (mPath != null ? mPath.hashCode() : 0);
+        result = 31 * result + (mFileType != null ? mFileType.hashCode() : 0);
+        return result;
+    }
 }

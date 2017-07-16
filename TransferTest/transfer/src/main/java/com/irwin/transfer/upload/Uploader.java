@@ -1,7 +1,6 @@
 package com.irwin.transfer.upload;
 
 import android.text.TextUtils;
-import android.util.Log;
 
 
 import com.irwin.transfer.IProgressListener;
@@ -12,8 +11,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,19 +31,28 @@ public class Uploader implements Status, MultipartConsts {
     private static final long PROGRESS_RATE = 1500;
     private UploadListener mListener;
     private int mStatus = Status.WAITING;
-    private UploadParam mParam;
+    private ArrayList<UploadParam> mParamList = new ArrayList<>();
 
 
     public Uploader() {
     }
 
-    public Uploader setParam(UploadParam param) {
-        mParam = param;
+    public Uploader setParam(UploadParam... param) {
+        for (UploadParam item : param) {
+            mParamList.add(item);
+        }
         return this;
     }
 
-    public UploadParam getParam() {
-        return mParam;
+    public Uploader setParam(Collection<UploadParam> collection) {
+        for (UploadParam item : collection) {
+            mParamList.add(item);
+        }
+        return this;
+    }
+
+    public List<UploadParam> getParam() {
+        return mParamList;
     }
 
     public Uploader setListener(UploadListener listener) {
@@ -63,15 +76,18 @@ public class Uploader implements Status, MultipartConsts {
     }
 
     public String getBoundaryPrefixed() {
-        return BOUNDARY_PREFIX + mParam.getBoundary();
+        return BOUNDARY_PREFIX + mParamList.get(0).getBoundary();
     }
 
 
     protected String doUpload() throws Exception {
-        final UploadParam param = mParam;
+        if (mParamList.size() == 0) {
+            throw new NullPointerException("No UploadParam specified.");
+        }
+        final UploadParam param = mParamList.get(0);
         HttpURLConnection connection = openConnection(param.getUrl());
         setRequestHeaders(connection, param);
-        return doSendData(connection, param);
+        return doUpload(connection, mParamList);
     }
 
     protected HttpURLConnection openConnection(String dstUrl) throws IOException {
@@ -100,7 +116,7 @@ public class Uploader implements Status, MultipartConsts {
         connection.setRequestProperty(HEADER_CONTENT_TYPE, String.format(CONTENT_TYPE_MULTIPART, CHARSET_UTF8, param.getBoundary()));
 //            connection.setRequestProperty(HEADER_CONNECTION, "Keep-Alive");
 //            connection.setRequestProperty("Charset", CHARSET_UTF8);
-        Map<String, String> headers = mParam.getHeaders();
+        Map<String, String> headers = param.getHeaders();
         if (headers != null && headers.size() > 0) {
             Set<String> keySet = headers.keySet();
             for (String key : keySet) {
@@ -109,42 +125,24 @@ public class Uploader implements Status, MultipartConsts {
         }
     }
 
-    protected String doSendData(HttpURLConnection connection, UploadParam param) throws Exception {
+    protected String doUpload(HttpURLConnection connection, List<UploadParam> paramList) throws Exception {
         //Multipart form, see:
 //        http://www.cnblogs.com/top5/archive/2012/02/12/2347751.html
 //        http://blog.csdn.net/MSPinyin/article/details/6141638
 
-//        ===============================================================================
-
-//
-//      ------WebKitFormBoundaryK7Ck1eEROPVUf1De--
-//		Content-Disposition: form-data; name="PARAM_KEY"
-//		Content-Type: text
-//
-//
-//		PARAM_VALUE
-//
-//        ------WebKitFormBoundaryK7Ck1eEROPVUf1De
-//        Content-Disposition: form-data; name="fileKey"; filename="bg_entry.png"
-//        Content-Type: image/png
-//
-//
-//     DATA
-
-//        =============================================================================
-        String path = param.getPath();
-        String fileKey = TextUtils.isEmpty(param.getFileKey()) ? "file" : param.getFileKey();
-        String fileName = param.getFileName();
-        String fileType = TextUtils.isEmpty(param.getContentType()) ? MIME_TYPE_ALL : param.getContentType();
-
-        DataOutputStream outs = null;
-        BufferedReader ins = null;
-        FileInputStream fouts = null;
-        String response = null;
-        try {
+        Iterator<UploadParam> iterator = paramList.iterator();
+        UploadParam param;
+        HashMap<UploadParam, byte[]> formMap = new HashMap<>();
+        long totalSize = 0;
+        byte[] headerBuf;
+        while (iterator.hasNext()) {
+            param = iterator.next();
+            String fileKey = TextUtils.isEmpty(param.getFileKey()) ? "file" : param.getFileKey();
+            String fileName = param.getFileName();
+            String fileType = TextUtils.isEmpty(param.getContentType()) ? MIME_TYPE_ALL : param.getContentType();
 
             //    Content-Disposition: form-data; name="fileKey"; filename="bg_entry.png"
-//            Content-Type: image/png
+            //            Content-Type: image/png
             StringBuilder builder = new StringBuilder(buildParams(param.getParams()));
             builder.append(getBoundaryPrefixed())
                     .append(CRLF)
@@ -154,51 +152,64 @@ public class Uploader implements Status, MultipartConsts {
                     .append(CRLF)
                     //Must jump to new line to indicate the beginning of data.
                     .append(CRLF);
-            byte[] headBuf = builder.toString().getBytes(CHARSET_UTF8);
-            //Must jump to new line to indicate the end of data.
-            byte[] tailBuf = (CRLF + getBoundaryPrefixed() + BOUNDARY_PREFIX + CRLF).getBytes(CHARSET_UTF8);
-            long currentBytes = 0;
-            File file = new File(path);
-            long totalSize = file.length() + headBuf.length + tailBuf.length;
-            //Generally speaking,Files larger than 4M should use streaming mode.
-            if (totalSize > 4 * 1024 * 1024) {
-                //Avoid oom when post large file.Ether way is ok.
-                connection.setChunkedStreamingMode(1024);
+            headerBuf = textToBytes(builder.toString());
+            totalSize += headerBuf.length;
+            formMap.put(param, headerBuf);
+            totalSize += new File(param.getPath()).length();
+        }
+        //Must jump to new line to indicate the end of data.
+        byte[] tailBuf = textToBytes(CRLF + getBoundaryPrefixed() + BOUNDARY_PREFIX + CRLF);
+        totalSize += tailBuf.length;
+        //Generally speaking,Files larger than 4M should use streaming mode.
+        if (totalSize > 4 * 1024 * 1024) {
+            //Avoid oom when post large file.Ether way is ok.
+            connection.setChunkedStreamingMode(1024);
 //                connection.setFixedLengthStreamingMode(totalSize);
-            }
-            connection.setRequestProperty(HEADER_CONTENT_LENGTH, String.valueOf(totalSize));
-            connection.connect();
-            Log.i("Info","Head: "+builder.toString());
+        }
+        connection.setRequestProperty(HEADER_CONTENT_LENGTH, String.valueOf(totalSize));
+        connection.connect();
 
+
+        DataOutputStream outs = null;
+        BufferedReader ins = null;
+        FileInputStream fouts = null;
+        String response = null;
+        iterator = paramList.iterator();
+        long startTime = System.currentTimeMillis();
+        long currentBytes = 0;
+        int length = -1;
+        long now = 0;
+        try {
             outs = new DataOutputStream(connection.getOutputStream());
-            outs.write(headBuf);
-            currentBytes += headBuf.length;
-            updateProgress(currentBytes, totalSize);
-            fouts = new FileInputStream(file);
-            byte[] buffer = new byte[1024];
-            int length = -1;
-            long startTime = System.currentTimeMillis();
-            long now = 0;
-            while ((length = fouts.read(buffer)) != -1) {
-                if (length > 0) {
-                    outs.write(buffer, 0, length);
-                    currentBytes += length;
-                    now = System.currentTimeMillis();
-                    if (now - startTime >= PROGRESS_RATE) {
-                        updateProgress(currentBytes, totalSize);
-                        startTime = now;
+            //Send single file.
+            while (iterator.hasNext()) {
+                param = iterator.next();
+                File file = new File(param.getPath());
+                headerBuf = formMap.get(param);
+                outs.write(headerBuf);
+                currentBytes += headerBuf.length;
+                fouts = new FileInputStream(file);
+                byte[] buffer = new byte[1024];
+                while ((length = fouts.read(buffer)) != -1) {
+                    if (length > 0) {
+                        outs.write(buffer, 0, length);
+                        currentBytes += length;
+                        now = System.currentTimeMillis();
+                        if (now - startTime >= PROGRESS_RATE) {
+                            updateProgress(currentBytes, totalSize);
+                            startTime = now;
+                        }
+                    }
+                    if (!canRun()) {
+                        throw new Exception("Upload cancelled");
                     }
                 }
-                if (!canRun()) {
-                    throw new Exception("Upload cancelled");
-                }
+                fouts.close();
+                fouts = null;
             }
             outs.write(tailBuf);
             outs.flush();
             updateProgress(totalSize, totalSize);
-
-            fouts.close();
-            fouts = null;
 
             //Response.
             if (connection.getResponseCode() != 200) {
@@ -237,6 +248,10 @@ public class Uploader implements Status, MultipartConsts {
             }
         }
         return response;
+    }
+
+    public static byte[] textToBytes(String text) throws UnsupportedEncodingException {
+        return text.getBytes(CHARSET_UTF8);
     }
 
     public String buildParams(List<MultipartParam> params) {
@@ -303,7 +318,7 @@ public class Uploader implements Status, MultipartConsts {
         if (isRunning()) {
             return;
         }
-        mParam = null;
+        mParamList = null;
         mListener = null;
         mStatus = WAITING;
     }
